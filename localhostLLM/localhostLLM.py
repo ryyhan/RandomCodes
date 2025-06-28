@@ -26,11 +26,10 @@ async def generate_text(request: GenerationRequest):
     """
     # Generate text, limiting to 50 new tokens for simplicity and speed
     # You can adjust max_new_tokens as needed
-    generated_output = generator(request.text, max_new_tokens=50, num_return_sequences=1)
+    generated_output = generator(request.text, max_new_tokens=50, num_return_sequences=1, return_full_text=False)
 
     # The output is a list of dictionaries, extract the generated text
-    # We take the first generated sequence and remove the input prompt from it
-    generated_text = generated_output[0]['generated_text'][len(request.text):].strip()
+    generated_text = generated_output[0]['generated_text'].strip()
 
     return {"generated_text": generated_text}
 
