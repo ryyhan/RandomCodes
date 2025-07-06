@@ -10,7 +10,7 @@ import numpy as np
 
 # For this example, we'll use a placeholder.
 # In a real application, use environment variables or a secure key management system.
-PINECONE_API_KEY = "YOUR_PINECONE_API_KEY"
+PINECONE_API_KEY = ""
 
 # Initialize the Pinecone client
 try:
@@ -35,10 +35,10 @@ if index_name not in client.list_indexes().names():
         client.create_index(
             name=index_name,
             dimension=embedding_dimension,
-            metric="cosine",  # The distance metric to use
+            metric="cosine",
             spec=ServerlessSpec(
                 cloud="aws",
-                region="us-west-2"
+                region="us-east-1"
             )
         )
         print(f"Index '{index_name}' created successfully.")
@@ -56,27 +56,74 @@ except Exception as e:
     print(f"Error connecting to index: {e}")
     exit()
 
-# --- Get user input and store embeddings ---
-vector_count = 0
+def add_data():
+    vector_count = 0
+    while True:
+        user_input = input("Enter a sentence to embed (or 'quit' to exit): ")
+        if user_input.lower() == 'quit':
+            break
+
+        # Generate the embedding
+        embedding = model.encode(user_input).tolist()
+
+        # Create a unique ID for the vector
+        vector_id = f"vec-{vector_count}"
+
+        # Create a metadata dictionary
+        metadata = {"original_text": user_input}
+
+        # Upsert the vector AND its metadata
+        try:
+            print(f"Upserting vector {vector_id}...")
+            index.upsert(vectors=[{
+                "id": vector_id,
+                "values": embedding,
+                "metadata": metadata
+            }])
+            print(f"Successfully upserted vector for: '{user_input}'")
+            vector_count += 1
+        except Exception as e:
+            print(f"Error upserting vector: {e}")
+
+def query_data():
+    while True:
+        query_input = input("Enter a query sentence (or 'quit' to exit): ")
+        if query_input.lower() == 'quit':
+            break
+
+        # Generate the embedding for the query
+        query_embedding = model.encode(query_input).tolist()
+
+        # Query the index
+        try:
+            print("Querying index...")
+            query_results = index.query(
+                vector=query_embedding,
+                top_k=3,  # Return the top 3 most similar results
+                include_metadata=True
+            )
+            print("Query results:")
+            for result in query_results['matches']:
+                print(f"  - Score: {result['score']:.4f}, Text: {result['metadata']['original_text']}")
+        except Exception as e:
+            print(f"Error querying index: {e}")
+
+# --- Main Menu ---
 while True:
-    user_input = input("Enter a sentence to embed (or 'quit' to exit): ")
-    if user_input.lower() == 'quit':
+    print("\n--- Pinecone Test Script ---")
+    print("1. Add data to the index")
+    print("2. Query data from the index")
+    print("3. Exit")
+    choice = input("Enter your choice (1-3): ")
+
+    if choice == '1':
+        add_data()
+    elif choice == '2':
+        query_data()
+    elif choice == '3':
         break
-
-    # Generate the embedding
-    embedding = model.encode(user_input).tolist()
-
-    # Create a unique ID for the vector
-    vector_id = f"vec-{vector_count}"
-
-    # Upsert the vector into the index
-    try:
-        print(f"Upserting vector {vector_id}...")
-        index.upsert(vectors=[{"id": vector_id, "values": embedding}])
-        print(f"Successfully upserted vector for: '{user_input}'")
-        vector_count += 1
-    except Exception as e:
-        print(f"Error upserting vector: {e}")
+    else:
+        print("Invalid choice. Please enter 1, 2, or 3.")
 
 # You can check the index status to see the final vector count
 try:
@@ -86,5 +133,3 @@ except Exception as e:
     print(f"Error describing index stats: {e}")
 
 print("\nScript finished.")
-print("To use this script, make sure you have the required libraries installed:")
-print("pip install pinecone-client sentence-transformers torch")
