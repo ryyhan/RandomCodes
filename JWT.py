@@ -9,14 +9,26 @@ app = FastAPI()
 USERNAME = "admin"
 PASSWORD = "password"
 
+# Secret key for JWT encoding/decoding
+SECRET_KEY = "mysecretkey"
+
 class LoginRequest(BaseModel):
     username: str
     password: str
 
+from datetime import datetime, timedelta
+import jwt
+
 @app.post("/login")
 def login(request: LoginRequest):
     if request.username == USERNAME and request.password == PASSWORD:
-        return {"message": "Login successful"}
+        # Generate JWT token
+        payload = {
+            "sub": request.username,
+            "exp": datetime.utcnow() + timedelta(hours=1)
+        }
+        token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+        return {"message": "Login successful", "token": token}
     else:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
