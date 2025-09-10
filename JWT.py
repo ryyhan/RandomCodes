@@ -32,6 +32,29 @@ def login(request: LoginRequest):
     else:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
+@app.get("/verify-token")
+def verify_token(token: str):
+    try:
+        decoded_token = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        return {"message": "Token is valid", "data": decoded_token}
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token has expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+@app.get("/refresh-token")
+def refresh_token(token: str):
+    try:
+        decoded_token = jwt.decode(token, SECRET_KEY, algorithms=["HS256"], options={"verify_exp": False})
+        new_payload = {
+            "sub": decoded_token["sub"],
+            "exp": datetime.utcnow() + timedelta(hours=1)
+        }
+        new_token = jwt.encode(new_payload, SECRET_KEY, algorithm="HS256")
+        return {"message": "Token refreshed successfully", "token": new_token}
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)
