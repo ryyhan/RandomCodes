@@ -55,6 +55,21 @@ def refresh_token(token: str):
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+@app.get("/user-info")
+def user_info(token: str):
+    try:
+        decoded_token = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        return {"message": "User information retrieved successfully", "user": decoded_token["sub"]}
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token has expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+@app.get("/logout")
+def logout(token: str):
+    # Simulate token invalidation (e.g., by adding it to a blacklist)
+    return {"message": "User logged out successfully"}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)
