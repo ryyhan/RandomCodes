@@ -25,7 +25,9 @@ def login(request: LoginRequest):
         # Generate JWT token
         payload = {
             "sub": request.username,
-            "exp": datetime.utcnow() + timedelta(hours=1)
+            "exp": datetime.utcnow() + timedelta(hours=1),
+            "role": "user",  # Example role
+            "permissions": ["read", "write"]  # Example permissions
         }
         token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
         return {"message": "Login successful", "token": token}
