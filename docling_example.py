@@ -66,3 +66,38 @@ another_doc = ExampleDocument(
 
 differences = compare_documents(example_doc, another_doc)
 print("Differences between documents:", differences)
+
+# Add functionality to clone a document
+def clone_document(doc):
+    return ExampleDocument(
+        title=doc.title,
+        content=doc.content,
+        author=doc.author,
+        created_at=doc.created_at
+    )
+
+cloned_doc = clone_document(example_doc)
+print("Cloned Document:", serialize_document(cloned_doc))
+
+# Add functionality to export document to JSON
+import json
+def export_to_json(doc, file_path):
+    with open(file_path, "w") as json_file:
+        json.dump(serialize_document(doc), json_file)
+    print(f"Document exported to {file_path}")
+
+export_to_json(example_doc, "example_document.json")
+
+# Add functionality to import document from JSON
+def import_from_json(file_path):
+    with open(file_path, "r") as json_file:
+        data = json.load(json_file)
+    return ExampleDocument(
+        title=data["title"],
+        content=data["content"],
+        author=data["author"],
+        created_at=data["created_at"]
+    )
+
+imported_doc = import_from_json("example_document.json")
+print("Imported Document:", serialize_document(imported_doc))
