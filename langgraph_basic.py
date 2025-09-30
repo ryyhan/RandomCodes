@@ -1,16 +1,18 @@
-# Orchestrator Agent with Sub-Agents: RAG, SQL, and MCP
+# Orchestrator Agent with Dynamic Sub-Agent Selection
 
 class Node:
     def __init__(self, name):
         self.name = name
-        self.behaviors = []
+        self.behaviors = {}
 
-    def add_behavior(self, behavior):
-        self.behaviors.append(behavior)
+    def add_behavior(self, query_type, behavior):
+        self.behaviors[query_type] = behavior
 
-    def act(self, *args, **kwargs):
-        for behavior in self.behaviors:
-            behavior(self, *args, **kwargs)
+    def act(self, query_type, *args, **kwargs):
+        if query_type in self.behaviors:
+            self.behaviors[query_type](self, *args, **kwargs)
+        else:
+            print(f"{self.name} has no behavior for query type: {query_type}")
 
     def __repr__(self):
         return f"Node({self.name})"
@@ -23,16 +25,11 @@ class LangGraph:
         if name not in self.nodes:
             self.nodes[name] = Node(name)
 
-    def connect(self, from_name, to_name):
-        if from_name in self.nodes and to_name in self.nodes:
-            # Orchestrator can trigger sub-agents
-            self.nodes[from_name].add_behavior(lambda node, target=self.nodes[to_name]: target.act())
-
-    def trigger(self, node_name, *args, **kwargs):
+    def trigger(self, node_name, query_type, *args, **kwargs):
         if node_name in self.nodes:
-            self.nodes[node_name].act(*args, **kwargs)
+            self.nodes[node_name].act(query_type, *args, **kwargs)
 
-# Example: Orchestrator Agent with Sub-Agents
+# Example: Orchestrator Agent with Dynamic Sub-Agent Selection
 if __name__ == "__main__":
     graph = LangGraph()
 
@@ -41,11 +38,6 @@ if __name__ == "__main__":
     graph.add_node("RAG Agent")
     graph.add_node("SQL Agent")
     graph.add_node("MCP Agent")
-
-    # Connecting orchestrator to sub-agents
-    graph.connect("Orchestrator", "RAG Agent")
-    graph.connect("Orchestrator", "SQL Agent")
-    graph.connect("Orchestrator", "MCP Agent")
 
     # Defining behaviors for sub-agents
     def rag_behavior(node):
@@ -57,11 +49,28 @@ if __name__ == "__main__":
     def mcp_behavior(node):
         print(f"{node.name} is interacting with the MCP server.")
 
-    # Assigning behaviors to sub-agents
-    graph.nodes["RAG Agent"].add_behavior(rag_behavior)
-    graph.nodes["SQL Agent"].add_behavior(sql_behavior)
-    graph.nodes["MCP Agent"].add_behavior(mcp_behavior)
+    # Assigning behaviors to sub-agents based on query type
+    graph.nodes["RAG Agent"].add_behavior("retrieve", rag_behavior)
+    graph.nodes["SQL Agent"].add_behavior("query", sql_behavior)
+    graph.nodes["MCP Agent"].add_behavior("interact", mcp_behavior)
 
-    # Triggering orchestrator
-    print("Orchestrator triggering sub-agents:")
-    graph.trigger("Orchestrator")
+    # Orchestrator dynamically selects sub-agent based on query type
+    def orchestrator_behavior(node, query_type):
+        print(f"{node.name} received query type: {query_type}")
+        if query_type == "retrieve":
+            graph.trigger("RAG Agent", query_type)
+        elif query_type == "query":
+            graph.trigger("SQL Agent", query_type)
+        elif query_type == "interact":
+            graph.trigger("MCP Agent", query_type)
+        else:
+            print(f"{node.name} cannot handle query type: {query_type}")
+
+    graph.nodes["Orchestrator"].add_behavior("dynamic", orchestrator_behavior)
+
+    # Example queries
+    print("Dynamic Orchestrator Example:")
+    graph.trigger("Orchestrator", "dynamic", "retrieve")
+    graph.trigger("Orchestrator", "dynamic", "query")
+    graph.trigger("Orchestrator", "dynamic", "interact")
+    graph.trigger("Orchestrator", "dynamic", "unknown")
