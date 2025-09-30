@@ -1,39 +1,67 @@
-# Basic LangGraph Code
+# Orchestrator Agent with Sub-Agents: RAG, SQL, and MCP
 
 class Node:
-    def __init__(self, value):
-        self.value = value
-        self.edges = []
+    def __init__(self, name):
+        self.name = name
+        self.behaviors = []
 
-    def add_edge(self, node):
-        self.edges.append(node)
+    def add_behavior(self, behavior):
+        self.behaviors.append(behavior)
+
+    def act(self, *args, **kwargs):
+        for behavior in self.behaviors:
+            behavior(self, *args, **kwargs)
 
     def __repr__(self):
-        return f"Node({self.value})"
+        return f"Node({self.name})"
 
 class LangGraph:
     def __init__(self):
         self.nodes = {}
 
-    def add_node(self, value):
-        if value not in self.nodes:
-            self.nodes[value] = Node(value)
+    def add_node(self, name):
+        if name not in self.nodes:
+            self.nodes[name] = Node(name)
 
-    def add_edge(self, from_value, to_value):
-        if from_value in self.nodes and to_value in self.nodes:
-            self.nodes[from_value].add_edge(self.nodes[to_value])
+    def connect(self, from_name, to_name):
+        if from_name in self.nodes and to_name in self.nodes:
+            # Orchestrator can trigger sub-agents
+            self.nodes[from_name].add_behavior(lambda node, target=self.nodes[to_name]: target.act())
 
-    def display(self):
-        for node in self.nodes.values():
-            edges = [edge.value for edge in node.edges]
-            print(f"{node.value} -> {edges}")
+    def trigger(self, node_name, *args, **kwargs):
+        if node_name in self.nodes:
+            self.nodes[node_name].act(*args, **kwargs)
 
-# Example usage
+# Example: Orchestrator Agent with Sub-Agents
 if __name__ == "__main__":
     graph = LangGraph()
-    graph.add_node("Python")
-    graph.add_node("Java")
-    graph.add_node("C++")
-    graph.add_edge("Python", "Java")
-    graph.add_edge("Python", "C++")
-    graph.display()
+
+    # Adding agents
+    graph.add_node("Orchestrator")
+    graph.add_node("RAG Agent")
+    graph.add_node("SQL Agent")
+    graph.add_node("MCP Agent")
+
+    # Connecting orchestrator to sub-agents
+    graph.connect("Orchestrator", "RAG Agent")
+    graph.connect("Orchestrator", "SQL Agent")
+    graph.connect("Orchestrator", "MCP Agent")
+
+    # Defining behaviors for sub-agents
+    def rag_behavior(node):
+        print(f"{node.name} is retrieving relevant documents.")
+
+    def sql_behavior(node):
+        print(f"{node.name} is querying the database.")
+
+    def mcp_behavior(node):
+        print(f"{node.name} is interacting with the MCP server.")
+
+    # Assigning behaviors to sub-agents
+    graph.nodes["RAG Agent"].add_behavior(rag_behavior)
+    graph.nodes["SQL Agent"].add_behavior(sql_behavior)
+    graph.nodes["MCP Agent"].add_behavior(mcp_behavior)
+
+    # Triggering orchestrator
+    print("Orchestrator triggering sub-agents:")
+    graph.trigger("Orchestrator")
